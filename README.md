@@ -1,191 +1,112 @@
 # Blood Test Analyzer – Debugged and Enhanced
 
-This repository contains a FastAPI-based application powered by CrewAI agents to analyze blood test reports. The application has been debugged and extended with features like asynchronous task processing via Celery and result persistence via SQLite.
-
----
+This repository documents a FastAPI application enhanced with CrewAI agents to analyze blood test reports. The system has been upgraded with asynchronous processing and persistent database storage.
 
 ## Getting Started
 
-### 1. Install Required Libraries
-
-Ensure you're in your virtual environment:
-
-```bash
-pip install -r requirements.txt
-```
-
----
+To install all required libraries, activate your virtual environment and run:
+`pip install -r requirements.txt`
 
 ## Debugging Summary
 
-This project initially had multiple bugs across core files and required several iterations of debugging, dependency fixing, and local testing.
+This project initially had multiple bugs across several files. Fixes included:
 
-### What I Did:
+* Addressing undefined variables and missing imports
+* Correcting async usage and method bindings
+* Cleaning up version conflicts in dependencies
 
-1. **Bug Identification** – Reviewed each Python file to trace the error sources.
-2. **Bug Fixing** – Applied corrections to function signatures, async handling, LLM instantiation, and module imports.
-3. **Testing** – Re-ran the full FastAPI server + Celery queue after every fix.
-4. **Retry Count** – Attempted and debugged the setup more than **5 times** due to dependency issues and resource constraints on an Intel i3 system.
-
----
+I attempted debugging and testing more than five times due to repeated compatibility issues, especially on my Intel i3 system with limited resources.
 
 ## System Constraints
 
-* **Machine**: Intel i3, 8GB RAM, Windows 10
-* **Issues Faced**:
-
-  * Dependency resolution errors (`resolution-too-deep`, version conflicts)
-  * Virtual environment performance delays
-  * Compatibility fixes due to limited hardware
-
----
+* Intel i3 processor, 8GB RAM, Windows 10
+* Frequent issues: slow dependency resolution, version incompatibility, environment delays
 
 ## Key Features
 
-* Upload and analyze blood test reports (PDF)
-* CrewAI multi-agent collaboration (Doctor, Verifier, Nutritionist, Fitness Coach)
-* Celery + Redis queue for background task execution
-* SQLite database integration to persist query results
-* Interactive API documentation at `/docs`
+* Analyze blood test PDFs using AI agents
+* Uses Celery and Redis for concurrent request processing
+* Results are saved in SQLite for later reference
+* API available with Swagger at `/docs`
 
----
+## Queue & Database Support
 
-## Queue Worker Model & Database Integration
+Submitted blood test reports are processed asynchronously through Celery workers using Redis as the broker. Each result is stored in a SQLite database with the original query and filename.
 
-The system uses a **Celery worker** and **Redis broker** to process analysis tasks asynchronously. Results are saved into a **SQLite database**, allowing the user to retrieve previous analysis using task IDs.
+## Folder Overview
 
----
+* `agents.py` – defines the agents (Doctor, Verifier, etc.)
+* `tools.py` – PDF reader tool
+* `task.py` – task configuration for agents
+* `main.py` – FastAPI app
+* `celery_worker.py` – Celery background worker
+* `database.py` & `models.py` – SQLite setup
 
-## Project Structure
+## How to Run
 
-```
-blood-test-analyser-debug/
-├── agents.py
-├── tools.py
-├── task.py
-├── main.py
-├── celery_worker.py
-├── models.py
-├── database.py
-├── requirements.txt
-├── data/
-├── output/
-└── analysis.db
-```
+1. Clone the repository and open the folder
+2. Create a virtual environment and activate it
+3. Install the required packages
+4. Start the Redis server
+5. Run the Celery worker
+6. Launch the FastAPI app using Uvicorn
 
----
+## Endpoints
 
-## Setup Instructions
+* `POST /analyze` → Submits a PDF for analysis
+* `GET /result/{task_id}` → Fetches result from database
 
-### Clone and Setup
+## Bug Fix Summary
 
-```bash
-git clone <your-repo-url>
-cd blood-test-analyser-debug
-```
+### agents.py
 
-### Create Virtual Environment
+* Fixed undefined `llm` assignment.
+* Corrected use of `tool=` to `tools=[...]` for agents.
+* Added missing `memory`, `verbose`, and `allow_delegation` arguments.
 
-```bash
-py -3.10 -m venv .venv
-.venv\Scripts\Activate.ps1  # Windows PowerShell
-```
+### tools.py
 
-### Install Requirements
+* Converted `read_data_tool` to a static method for compatibility with CrewAI.
+* Imported `PDFLoader` correctly from `langchain.document_loaders`.
+* Cleaned unnecessary async logic and added string cleanup in report parsing.
 
-```bash
-pip install --upgrade pip
-pip install -r requirements.txt
-```
+### task.py
 
-### Start Redis Server
+* Task `tools` reference was misaligned; corrected to use `tools=[...]`.
+* Fixed agent references and task `expected_output` formatting.
 
-```bash
-redis-server
-```
+### main.py
 
-### Run Celery Worker
+* Refactored analysis logic into a Celery background task to prevent API blocking.
+* Improved exception handling and ensured temp files are cleaned up.
+* Added `/result/{task_id}` endpoint to retrieve results from DB.
 
-```bash
-celery -A celery_worker.celery_app worker --loglevel=info
-```
+### celery\_worker.py
 
-### Run FastAPI Server
+* Added a background task that receives query and file path, reads the report, executes CrewAI workflow, and stores the result in the database.
 
-```bash
-uvicorn main:app --reload
-```
+### database.py / models.py
 
-Visit: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+* Defined `AnalysisResult` table with `task_id`, `query`, `result`, and `filename` fields.
+* Connected SQLite using SQLAlchemy ORM and created necessary schema.
 
----
+### requirements.txt
 
-## API Endpoints
-
-### `POST /analyze`
-
-* Upload blood report
-* Queue analysis task
-
-### `GET /result/{task_id}`
-
-* Retrieve analysis result from database
-
----
-
-## Bugs Fixed – File-wise Summary
-
-### `agents.py`
-
-* Fixed undefined `llm` reference
-* Corrected tool assignments and agent instantiation
-
-### `tools.py`
-
-* Made `read_data_tool` a static method
-* Fixed missing import: `PDFLoader`
-
-### `main.py`
-
-* Moved analysis logic to Celery background job
-* Added async-safe result retrieval endpoint
-
-### `task.py`
-
-* Repaired CrewAI tool/task linking
-
-### `requirements.txt`
-
-* Removed strict/conflicting versions
-* Resolved: `pydantic`, `onnxruntime`, `openai`, `langchain` issues
-
----
+* Removed conflicting versions (e.g., `onnxruntime==1.18.0`).
+* Locked `crewai==0.130.0` and set compatible versions of `openai`, `pydantic`, and `langchain-core`.
+* Cleaned unused or broken packages after multiple install failures.
 
 ## Core Dependencies
 
-```txt
-fastapi
-uvicorn
-crewai==0.130.0
-openai>=1.13.3
-python-dotenv
-pydantic>=2.4.2
-celery
-redis
-sqlalchemy
-numpy
-pandas
-```
-
----
+* FastAPI, Uvicorn, Celery, Redis
+* crewai==0.130.0, openai>=1.13.3
+* pydantic>=2.4.2, numpy, pandas, sqlalchemy
 
 ## Author
 
-**Srishti Jalan**
-📧 [srishtijalan622@gmail.com](mailto:srishtijalan622@gmail.com)
-📞 7003824749
-🔗 [LinkedIn](https://www.linkedin.com/in/srishti-jalan)
+Srishti Jalan
+Email: [srishtijalan622@gmail.com](mailto:srishtijalan622@gmail.com)
+Phone: 7003824749
+[LinkedIn](https://www.linkedin.com/in/srishti-jalan)
 
----
-
-Built using: CrewAI · FastAPI · Celery · Redis · SQLAlchemy
+Built with: CrewAI · FastAPI · Celery · Redis · SQLAlchemy
