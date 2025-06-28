@@ -1,6 +1,7 @@
 import os
 from crewai_tools import BaseTool
-from langchain.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader
+
 
 # Tool to read blood test report PDFs
 class BloodTestReportTool(BaseTool):
